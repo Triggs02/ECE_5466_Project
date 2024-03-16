@@ -51,6 +51,7 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 // Only defining 3 handles: Service, Characteristic, and Characteristic Value
 #define GATTS_NUM_HANDLE_TEST_A     3
 
+// Ignore the Test B values for now - our project will only end up using 1 characteristic + attribute!
 #define GATTS_SERVICE_UUID_TEST_B   0x00EE
 #define GATTS_CHAR_UUID_TEST_B      0xEE01
 #define GATTS_DESCR_UUID_TEST_B     0x2222
@@ -63,10 +64,17 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
 #define PREPARE_BUF_MAX_SIZE 1024
 
-// Defining an upperbound of the buffer size for a given attribute's value in a characteristic
+// An upperbound of the buffer size for a given attribute's value in a characteristic
 #define ATT_DATA_BUF_MAX_SIZE 11
 
-// Buffer to keep track of example characteristic's data
+/**
+ * @brief Buffer to keep track of example characteristic's attribute data
+ *        The ordering of bytes in the buffer should occur as follows:
+ *           | Bytes 0 - 1 | Byte 2 - 3 | Byte 4 | Byte 5 - 11 |
+ *             Fridge Temp    Fridge       Puck     Puck MAC
+ *                Info          VOC       Battery     Addr
+ *                                         Life
+ */
 uint8_t charData[ATT_DATA_BUF_MAX_SIZE];
 
 static uint8_t char1_str[] = {0x11,0x22,0x33};
@@ -320,13 +328,14 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         gl_profile_tab[PROFILE_A_APP_ID].service_id.id.inst_id = 0x00;
         // gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.len = ESP_UUID_LEN_16;
         // gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.uuid.uuid16 = GATTS_SERVICE_UUID_TEST_A;
-        
+
+        // Initializing the service UUID for the "Fridge Monitor" service       
         gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.len = ESP_UUID_LEN_128;
 
         uint8_t * profile_uuid_service = gl_profile_tab[PROFILE_A_APP_ID].service_id.id.uuid.uuid.uuid128;
         uint8_t service_uuid[16] = GATTS_SERVICE_UUID_TEST_A;
 
-        // memccpy(profile_uuid_service, service_uuid, 16);
+        // Copying over the previously defined UUID into profile A
         for (uint8_t byte = 0; byte < 16; byte++) 
         {
             profile_uuid_service[byte] = service_uuid[byte];
@@ -364,34 +373,30 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #endif
         esp_ble_gatts_create_service(gatts_if, &gl_profile_tab[PROFILE_A_APP_ID].service_id, GATTS_NUM_HANDLE_TEST_A);
         break;
-    // The event that would be triggered by our Android app to collect the data
+    // APP: The event that would be triggered by our Android app to collect the data off the esp-32
     case ESP_GATTS_READ_EVT: {
         ESP_LOGI(GATTS_TAG, "GATT_READ_EVT, conn_id %d, trans_id %" PRIu32 ", handle %d", param->read.conn_id, param->read.trans_id, param->read.handle);
         esp_gatt_rsp_t rsp;
         memset(&rsp, 0, sizeof(esp_gatt_rsp_t));
         rsp.attr_value.handle = param->read.handle;
+
         // Filling the response value with the dynamically stored attribute value
         rsp.attr_value.len = ATT_DATA_BUF_MAX_SIZE;
         memcpy(rsp.attr_value.value, charData, ATT_DATA_BUF_MAX_SIZE);
-        // rsp.attr_value.len = 4;
-        // rsp.attr_value.value[0] = 0xde;
-        // rsp.attr_value.value[1] = 0xed;
-        // rsp.attr_value.value[2] = 0xbe;
-        // rsp.attr_value.value[3] = 0xef;
+        
         esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id,
                                     ESP_GATT_OK, &rsp);
         break;
     }
-    // The event that would be triggered by the client's request to write to the stored characteristic
+    // PUCK: The event that would be triggered by the client's request to write to the stored characteristic
     case ESP_GATTS_WRITE_EVT: {
         ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, conn_id %d, trans_id %" PRIu32 ", handle %d", param->write.conn_id, param->write.trans_id, param->write.handle);
         if (!param->write.is_prep){
             ESP_LOGI(GATTS_TAG, "GATT_WRITE_EVT, value len %d, value :", param->write.len);
             
-            // Ensuring the value being written does not exceed the max length of the attribute
-            size_t valLength = param->write.len > ATT_DATA_BUF_MAX_SIZE ? ATT_DATA_BUF_MAX_SIZE : param->write.len;
+            // Always ensuring the new value being written overwrites what existed
             // Saving the written value to the stored attribute data buffer
-            memcpy(charData, param->write.value, valLength);
+            memcpy(charData, param->write.value, ATT_DATA_BUF_MAX_SIZE);
 
             esp_log_buffer_hex(GATTS_TAG, param->write.value, param->write.len);
             if (gl_profile_tab[PROFILE_A_APP_ID].descr_handle == param->write.handle && param->write.len == 2){
@@ -443,17 +448,19 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         break;
     case ESP_GATTS_UNREG_EVT:
         break;
+    // Event used to init each characteristic for profile A - would need to create as many characteristics as necessary here
+    // Only 1 characteristic is created here for now --> "Fridge Monitor Information"
     case ESP_GATTS_CREATE_EVT:
         ESP_LOGI(GATTS_TAG, "CREATE_SERVICE_EVT, status %d,  service_handle %d", param->create.status, param->create.service_handle);
         gl_profile_tab[PROFILE_A_APP_ID].service_handle = param->create.service_handle;
-        // gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_16;
-        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_128;
-        // gl_profile_tab[PROFILE_A_APP_ID].char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_TEST_A;
+
         // Setting the 128-bit custom UUID for the first characteristic of the service
+        gl_profile_tab[PROFILE_A_APP_ID].char_uuid.len = ESP_UUID_LEN_128;
         uint8_t * profile_char_uuid = gl_profile_tab[PROFILE_A_APP_ID].char_uuid.uuid.uuid128;
         uint8_t char_uuid[16] = GATTS_CHAR_UUID_TEST_A; 
 
         // memccpy(profile_char_uuid, char_uuid, sizeof(int), 16);
+        // Copying over the previously defined UUID for the characteristic into profile A
         for (int byte = 0; byte < 16; byte++) {
             profile_char_uuid[byte] = char_uuid[byte];
         }

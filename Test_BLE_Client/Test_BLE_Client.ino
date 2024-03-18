@@ -7,7 +7,8 @@ static BLEUUID    charUUID("1974e0a7-a490-4869-84b7-5f03cf47ac9d");
 
 BLEClient*  pClient;
 static BLERemoteCharacteristic* pRemoteCharacteristic;
-static BLEAddress targetAddress("94:B9:7E:D5:62:56");  // TODO: Update to real client MAC address
+// static BLEAddress targetAddress("94:B9:7E:D5:62:56");
+static BLEAddress targetAddress("D4:8A:FC:A8:91:3E");
 
 class MyClientCallback : public BLEClientCallbacks {
   void onConnect(BLEClient* pclient) {

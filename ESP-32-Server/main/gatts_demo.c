@@ -25,6 +25,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
+#include "uart_tx.h"  // Custom API for init and transmit over UART on the ESP32
 
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
@@ -397,6 +398,9 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
             // Always ensuring the new value being written overwrites what existed
             // Saving the written value to the stored attribute data buffer
             memcpy(charData, param->write.value, ATT_DATA_BUF_MAX_SIZE);
+
+            // Writing the message over UART connection - using the last byte of the MAC addr as the ID for now
+            comm_tx_msg(param->write.bda[5], charData, ATT_DATA_BUF_MAX_SIZE);
 
             esp_log_buffer_hex(GATTS_TAG, param->write.value, param->write.len);
             if (gl_profile_tab[PROFILE_A_APP_ID].descr_handle == param->write.handle && param->write.len == 2){
@@ -789,6 +793,9 @@ void app_main(void)
     if (local_mtu_ret){
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+
+    // Initializing the UART (serial) communication link
+    comm_tx_init();
 
     return;
 }

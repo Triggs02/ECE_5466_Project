@@ -70,11 +70,16 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 
 /**
  * @brief Buffer to keep track of example characteristic's attribute data
+ *        Bytes 0-6 are received by a given Fridge puck and byte 7 is appended
+ *        based on the puck's MAC addr by this GATT server. Byte 7 will be used
+ *        to differentiate the different puck's when viewed in the Android app.
+ * 
  *        The ordering of bytes in the buffer should occur as follows:
- *           | Bytes 0 - 1 | Byte 2 - 3 | Byte 4 | Byte 5 - 11 |
- *             Fridge Temp    Fridge       Puck     Puck MAC
- *                Info          VOC       Battery     Addr
- *                                         Life
+ *           | Bytes 0 - 3 | Byte 4 - 5 | Byte 6 |    Byte 7    |
+ *              Fridge         Fridge      Puck      Last Byte
+ *               TVOC          Temp (C)   Battery       of
+ *                                         Level     Puck Mac
+ *                                                     Addr
  */
 uint8_t charData[ATT_DATA_BUF_MAX_SIZE];
 

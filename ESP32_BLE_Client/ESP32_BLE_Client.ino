@@ -138,7 +138,8 @@ void loop() {
     Serial.print("raw10="); Serial.print(raw%1024); Serial.print(" ADC  ");
     Serial.print("R="); Serial.print((1650*1000L/1023)*(raw%1024)/(raw/1024)); Serial.print(" ohm");
     Serial.println();
-    reportReading(etvoc * 1000, 0, 3);
+    // Conversion from ppm to mg/m^3 src: http://niosh.dnacih.com/nioshdbs/calc.htm
+    reportReading(etvoc / (1000.0 * 24.45), 0, 3);
   } else if( errstat==CCS811_ERRSTAT_OK_NODATA ) {
     Serial.println("CCS811: waiting for (new) data");
   } else if( errstat & CCS811_ERRSTAT_I2CFAIL ) { 

@@ -1,16 +1,27 @@
 #include "BLEDevice.h"
 #include <Wire.h>
 #include "ccs811.h"
+#include "driver/temp_sensor.h"
 
 // === Wiring ===
-// CCS811 -> ESP32
-// VDD    ->  3V3
-// GND    ->  GND
-// SDA    ->  D21
-// SCL    ->  D22
-// Wake   ->  D23
+// CCS811 -> ESP32 / ESP32Se
+// VDD    ->  3V3  / 3V3
+// GND    ->  GND  / GND
+// SDA    ->  D21  / D6
+// SCL    ->  D22  / D7
+// Wake   ->  D23  / D5
 
-CCS811 ccs811(23);
+#define SDA0_Pin 6   // select ESP32  I2C pins
+#define SCL0_Pin 7
+
+CCS811 ccs811(5);
+
+void initTempSensor(){
+    temp_sensor_config_t temp_sensor = TSENS_CONFIG_DEFAULT();
+    temp_sensor.dac_offset = TSENS_DAC_L2;  // TSENS_DAC_L2 is default; L4(-40°C ~ 20°C), L2(-10°C ~ 80°C), L1(20°C ~ 100°C), L0(50°C ~ 125°C)
+    temp_sensor_set_config(temp_sensor);
+    temp_sensor_start();
+}
 
 // The remote service we wish to connect to.
 static BLEUUID serviceUUID("1974e0a6-a490-4869-84b7-5f03cf47ac9d");
@@ -107,7 +118,7 @@ void setup() {
   BLEDevice::init("");
 
   // Enable I2C
-  Wire.begin(); 
+  Wire.begin(SDA0_Pin, SCL0_Pin);
   
   // Enable CCS811
   ccs811.set_i2cdelay(50); // Needed for ESP8266 because it doesn't handle I2C clock stretch correctly
@@ -122,6 +133,8 @@ void setup() {
   // Start measuring
   ok= ccs811.start(CCS811_MODE_1SEC);
   if( !ok ) Serial.println("setup: CCS811 start FAILED"); 
+
+  initTempSensor();
 }
 
 void loop() {
@@ -139,7 +152,9 @@ void loop() {
     Serial.print("R="); Serial.print((1650*1000L/1023)*(raw%1024)/(raw/1024)); Serial.print(" ohm");
     Serial.println();
     // Conversion from ppm to mg/m^3 src: http://niosh.dnacih.com/nioshdbs/calc.htm
-    reportReading(etvoc / (1000.0 * 24.45), 0, 3);
+    float intTemp = 0;
+    temp_sensor_read_celsius(&intTemp);
+    reportReading(etvoc / (1000.0 * 24.45), intTemp, 3);
   } else if( errstat==CCS811_ERRSTAT_OK_NODATA ) {
     Serial.println("CCS811: waiting for (new) data");
   } else if( errstat & CCS811_ERRSTAT_I2CFAIL ) { 

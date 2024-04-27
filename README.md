@@ -34,10 +34,27 @@ Required Software: Arduino IDE with ESP32 Board Support Installed, and the [CCS8
 
 ### ESP32 Bluetooth Server
 
-Required Software: ESP IDF installed
+Required Software: ESP IDF installed on target development system
+                      - A great tool to use is VisualStudio Code's ESP-IDF extension (the instructions below assume you have this installed)
+Required Files: All files contained within the ESP-32-Server on the main branch
+Required Hardware: A development board with ESP32/ESP32-C3/ESP32-C2/ESP32-H2/ESP-S3 SoC
+                   and a USB cable to provide power to the device and allow for the programming of the board.
 
-* TODO: Tyler add your steps here for how to take the raw source code files and add them to the ESP-IDF project
-* Then also explain what commands you need to run to flash said project to the board
+Steps to Properly Build Example:
+* Ensure ESP-IDF and its corresponding build tools are installed in Visual Studio Code
+      - A helpful tutorial on how to do this properly can be found here: https://github.com/espressif/vscode-esp-idf-extension/blob/master/docs/tutorial/install.md
+* Place all files contained within the ESP-32-Server folder into the directory that development will be taking place.
+* Ensure that the correct chip target has been selected bby issuing the following command (Where chip name refers to one of the previously mentioned chips in the "Required Hardware" section):
+
+```bash
+idf.py set-target <chip_name>
+```
+
+* Finally, once the development environment and chip have been selected, issue the following command to initiate the building and flashing procedures (make sure to hold down the 'Boot' button on the dev-board device after the build process is done and until the flash process appears to start):
+
+```bash
+idf.py flash
+```
 
 ### ESP32 Websocket Server
 

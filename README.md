@@ -34,10 +34,10 @@ Required Software: Arduino IDE with ESP32 Board Support Installed, and the [CCS8
 
 ### ESP32 Bluetooth Server
 
-Required Software: ESP IDF installed on target development system
+* Required Software: ESP IDF installed on target development system
                       - A great tool to use is VisualStudio Code's ESP-IDF extension (the instructions below assume you have this installed)
-Required Files: All files contained within the ESP-32-Server on the main branch
-Required Hardware: A development board with ESP32/ESP32-C3/ESP32-C2/ESP32-H2/ESP-S3 SoC
+* Required Files: All files contained within the ESP-32-Server on the main branch
+* Required Hardware: A development board with ESP32/ESP32-C3/ESP32-C2/ESP32-H2/ESP-S3 SoC
                    and a USB cable to provide power to the device and allow for the programming of the board.
 
 Steps to Properly Build Example:

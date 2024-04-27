@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Fridge Temp VOC</string>
+    <string name="current_VOC_concentration_label">Current VOC Concentration</string>
+</resources>
